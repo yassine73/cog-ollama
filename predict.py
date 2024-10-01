@@ -21,12 +21,20 @@ class Predictor(BasePredictor):
         print("Running model")
         subprocess.check_call(["ollama", "run", MODEL_NAME], close_fds=False)
 
-    def predict(self, prompt: str = Input(description="Input text for the model")) -> ConcatenateIterator[str]:
+    def predict(
+            self, prompt: str = Input(description="Input text for the model"),
+            temperature: float = Input(description="Temperature", default=0.7),
+            max_tokens: int = Input(description="Temperature", default=30)
+        ) -> ConcatenateIterator[str]:
         """Run a single prediction on the model and stream the output"""
         payload = {
             "model": MODEL_NAME,
             "prompt": prompt,
-            "stream": True
+            "options" : {
+                "temperature": temperature,
+                "num_predict": max_tokens
+            },
+            "stream": True,
         }
         headers = {
             "Content-Type": "application/json"

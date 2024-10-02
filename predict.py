@@ -12,42 +12,37 @@ class Predictor(BasePredictor):
     def setup(self):
         """Setup necessary resources for predictions"""
         # Start server
-        print("Starting ollama server")
+        print("###Starting ollama server...")
         subprocess.Popen(["ollama", "serve"])
         time.sleep(2)
-        print("Downloading model")
-        subprocess.check_call(["ollama", "pull", MODEL_NAME], close_fds=False)
         # Load model
-        print("Running model")
+        print("###Downloading & Running model...")
         subprocess.check_call(["ollama", "run", MODEL_NAME], close_fds=False)
 
     def predict(
             self, prompt: str = Input(description="Input text for the model"),
-            temperature: float = Input(description="Temperature", default=0.7),
-            max_tokens: int = Input(description="Temperature", default=30)
+            temperature: float = Input(description="Input number for temperature", default=0.7),
+            num_predict: int = Input(description="Input for Maximum number of tokens, -1 = infinite generation, -2 = fill context", default=-2)
         ) -> ConcatenateIterator[str]:
         """Run a single prediction on the model and stream the output"""
         payload = {
             "model": MODEL_NAME,
             "prompt": prompt,
-            "options" : {
+            "options": {
                 "temperature": temperature,
-                "num_predict": max_tokens
-            },
-            "stream": True,
+                "num_predict": num_predict
+            }
         }
         headers = {
             "Content-Type": "application/json"
         }
-        
-        start_time = time.time()
-        
+                        
         with requests.post(
             OLLAMA_GENERATE,
             headers=headers,
-            data=json.dumps(payload),
+            json=payload,
             stream=True,
-            timeout=60
+            timeout=300
         ) as response:
             for line in response.iter_lines():
                 if line:
@@ -57,7 +52,3 @@ class Predictor(BasePredictor):
                             yield chunk['response']
                     except json.JSONDecodeError:
                         print("Failed to parse response chunk as JSON")
-        
-        end_time = time.time()
-        total_time = end_time - start_time
-        print("Total runtime:", total_time)
